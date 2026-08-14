@@ -1,0 +1,5 @@
+# openssl rand -hex 32
+COOKIE_ENCRYPTION_KEY=
+# Wallos instances a connection may bind to: comma-separated hosts,
+# *.example.com, or * for any. Empty admits nobody.
+ALLOWED_HOSTS=

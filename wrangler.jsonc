@@ -1,0 +1,64 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "wallos-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"migrations": [
+		{
+			"new_sqlite_classes": ["WallosMCP"],
+			"tag": "v1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "WallosMCP",
+				"name": "MCP_OBJECT"
+			}
+		]
+	},
+	// No id: every OAuth grant lives in this namespace, and each deployment
+	// needs its own. A deploy that finds none has one provisioned on the
+	// account it uploads to.
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV"
+		}
+	],
+	"rules": [{ "type": "Text", "globs": ["**/*.html"] }],
+	"vars": {
+		// How many distinct Wallos accounts may ever complete sign-in.
+		"MAX_ACCOUNTS": "25",
+		// Tools that rewrite instance-wide administration — OIDC, registration,
+		// SMTP, password login — stay out of the tool list unless this is "1".
+		// Locking yourself out of your own instance is one bad argument away.
+		"ADMIN_TOOLS": "0"
+	},
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "RATE_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "4211",
+				// Wallos calls allowed per bound account, counted across its sessions.
+				// The binding reads these at build time — limit() takes only a key —
+				// so this is where the ceiling is set. The namespace is private to
+				// this Worker: another one sharing the number would share the counters.
+				"simple": { "limit": 120, "period": 60 }
+			},
+			{
+				"name": "REGISTER_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "4212",
+				// Client registration is open to anyone with the URL and writes a KV
+				// entry each time. A client registers once and keeps its id, so a
+				// caller asking this often is not one.
+				"simple": { "limit": 10, "period": 60 }
+			}
+		]
+	},
+	"observability": {
+		"enabled": true
+	}
+}

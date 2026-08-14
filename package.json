@@ -1,0 +1,58 @@
+{
+	"name": "wallos-mcp",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Your Wallos subscription tracker on a Cloudflare Worker you deploy yourself: list, create, edit and delete subscriptions, categories, payment methods, household members and currencies, over MCP",
+	"license": "MIT",
+	"author": "mkpoli",
+	"homepage": "https://github.com/mkpoli/wallos-mcp#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mkpoli/wallos-mcp.git"
+	},
+	"bugs": {
+		"url": "https://github.com/mkpoli/wallos-mcp/issues"
+	},
+	"keywords": [
+		"mcp",
+		"model-context-protocol",
+		"mcp-server",
+		"wallos",
+		"subscriptions",
+		"self-hosted",
+		"cloudflare-workers"
+	],
+	"mcpName": "io.github.mkpoli/wallos-mcp",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check": "biome check src test && tsc --noEmit",
+		"fix": "biome check --write src test",
+		"test": "bun test",
+		"types": "wrangler types"
+	},
+	"cloudflare": {
+		"bindings": {
+			"COOKIE_ENCRYPTION_KEY": {
+				"description": "Random 32 bytes as hex, from `openssl rand -hex 32`. It signs the approval cookie the sign-in flow sets."
+			},
+			"ALLOWED_HOSTS": {
+				"description": "Which Wallos instances a connection may bind to: a comma-separated list of hosts, *.your-domain.com, or * for any host. Empty means none."
+			}
+		}
+	},
+	"dependencies": {
+		"@cloudflare/workers-oauth-provider": "^0.8.1",
+		"@modelcontextprotocol/sdk": "^1.10.2",
+		"agents": "^0.17.1",
+		"hono": "^4.12.27",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.5",
+		"@types/bun": "^1.3.14",
+		"typescript": "^5.5.2",
+		"wrangler": "^4.90.0"
+	}
+}
