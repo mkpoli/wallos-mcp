@@ -13,7 +13,7 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP-6E56CF)](https://modelcontextprotocol.io/)
 [![OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1_+_PKCE-2ea44f)](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1)
 [![33 tools](https://img.shields.io/badge/tools-33-0b7285)](#what-it-can-do)
-[![tests](https://img.shields.io/badge/tests-96_passing-success?logo=bun&logoColor=white)](#how-it-was-tested)
+[![tests](https://img.shields.io/badge/tests-98_passing-success?logo=bun&logoColor=white)](#how-it-was-tested)
 [![Wallos 5.0+](https://img.shields.io/badge/Wallos-5.0%2B-0d9488)](#which-wallos-it-works-with)
 
 </div>
@@ -226,7 +226,7 @@ Redirects are refused rather than followed. A `307` or `308` preserves the metho
 
 ## How it was tested
 
-`bun test` runs 96 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, the account cap, and grant isolation between sessions.
+`bun test` runs 98 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, the account cap, and grant isolation between sessions.
 
 `scripts/e2e.ts` runs the client against a real instance, which is where the wire contract is actually settled:
 
@@ -236,6 +236,8 @@ WALLOS_URL=... WALLOS_API_KEY=... bun run scripts/e2e.ts --write
 ```
 
 The read pass checks versions, users, master data, filters, costs and settings, and that a wrong key is refused. The `--write` pass creates a category and a subscription, edits the subscription and reads the change back, then deletes both and confirms they are gone. It has been run against Wallos v5.2.0 and v5.4.2.
+
+The deployment itself was verified by driving a client handshake end to end against it — dynamic registration, `/authorize`, the approval dialog, sign-in with a real key, the code-for-token exchange, `initialize`, `tools/list`, and two `tools/call` round trips returning live data.
 
 ## Development
 
