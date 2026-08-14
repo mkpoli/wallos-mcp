@@ -86,7 +86,20 @@ describe("normalizeBaseUrl", () => {
 
 describe("accountId", () => {
 	test("keys a grant by host and user id", () => {
-		expect(accountId("https://Wallos.Example.com", 3)).toBe("https://wallos.example.com:3");
+		expect(accountId("https://Wallos.Example.com", 3)).toBe("https%3A%2F%2Fwallos.example.com@3");
+	});
+
+	// The OAuth provider splits an authorization code on ":" and demands exactly
+	// three parts, so an identity carrying one breaks every token exchange.
+	test("carries no colon, whatever the address", () => {
+		for (const url of [
+			"https://example.com",
+			"https://example.com:8443",
+			"https://example.com/wallos",
+			"https://sub.example.com:8443/wallos/home",
+		]) {
+			expect(accountId(url, 1)).not.toInclude(":");
+		}
 	});
 
 	test("two installations on one host are two accounts", () => {
@@ -169,5 +182,14 @@ describe("meetsMinimum", () => {
 
 	test("an unreadable version is not treated as ancient", () => {
 		expect(meetsMinimum("unknown")).toBe(true);
+	});
+});
+
+// The shape @cloudflare/workers-oauth-provider packs an account identity into.
+describe("account identity survives the OAuth provider's code format", () => {
+	test("userId:grantId:secret still splits into three parts", () => {
+		const id = accountId("https://wallos.example.com:8443/wallos", 1);
+		const code = `${id}:grant-abc:secret-xyz`;
+		expect(code.split(":")).toHaveLength(3);
 	});
 });

@@ -7,7 +7,11 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["src/**", "test/**", "scripts/**"]
+		"includes": [
+			"src/**",
+			"test/**",
+			"scripts/**"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -18,13 +22,28 @@
 		"enabled": true,
 		"rules": {
 			"preset": "recommended",
-			"correctness": { "noUndeclaredVariables": "error" },
+			"correctness": {
+				"noUndeclaredVariables": "error"
+			},
 			"suspicious": {
 				"noExplicitAny": "error",
-				"noConsole": { "level": "warn", "options": { "allow": ["error", "warn"] } }
+				"noConsole": {
+					"level": "warn",
+					"options": {
+						"allow": [
+							"error",
+							"warn"
+						]
+					}
+				}
 			},
-			"complexity": { "noExcessiveCognitiveComplexity": "warn" },
-			"style": { "useConst": "error", "noNonNullAssertion": "error" }
+			"complexity": {
+				"noExcessiveCognitiveComplexity": "warn"
+			},
+			"style": {
+				"useConst": "error",
+				"noNonNullAssertion": "error"
+			}
 		}
 	},
 	"javascript": {
@@ -39,5 +58,19 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"scripts/**"
+			],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
+		}
+	]
 }

@@ -79,10 +79,17 @@ export function parseLimit(raw: string | undefined, fallback: number): number {
 // installations can share a hostname behind different ports or path prefixes,
 // and each keeps its own user table, so user 1 of one is not user 1 of the
 // other. The allowlist stays hostname-only; identity is the whole address.
+// The OAuth provider hands this string back to itself inside an authorization
+// code as `userId:grantId:secret` and splits on ":" expecting three parts, and
+// it builds KV keys as `grant:${userId}:${grantId}`. An address contains colons
+// of its own — after the scheme, before a port — so it is percent-encoded here.
+// A colon reaching the provider makes every token exchange fail with "Invalid
+// authorization code format", after a sign-in that looked like it worked.
 export function accountId(baseUrl: string, userId: number): string {
 	const url = new URL(baseUrl);
 	const path = url.pathname.replace(/\/+$/, "");
-	return `${url.protocol}//${url.host.toLowerCase()}${path}:${userId}`;
+	const address = `${url.protocol}//${url.host.toLowerCase()}${path}`;
+	return `${encodeURIComponent(address)}@${userId}`;
 }
 
 export function accountIdFromProps(props: Props): string {
