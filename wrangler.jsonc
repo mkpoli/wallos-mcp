@@ -3,7 +3,11 @@
 	"name": "wallos-mcp",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-07-01",
-	"compatibility_flags": ["nodejs_compat"],
+	// global_fetch_strictly_public: a sign-in names the host this Worker then
+	// fetches, so without it a subrequest can reach a private address or take the
+	// inside route to an origin in the Worker's own zone, skipping whatever that
+	// zone's front door enforces. With it, every fetch leaves as public traffic.
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"migrations": [
 		{
 			"new_sqlite_classes": ["WallosMCP"],

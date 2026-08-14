@@ -304,12 +304,16 @@ async function checkSignInCredentials(
 			403,
 		);
 	}
-	if (isPrivateHost(hostname) && String(envBindings.ALLOW_PRIVATE_HOSTS) !== "1") {
+	// global_fetch_strictly_public already refuses these at the platform, where
+	// the failure is an opaque network error. Naming the reason here is the
+	// difference between "your LAN address is not reachable from a Worker" and
+	// a sign-in that appears to hang.
+	if (isPrivateHost(hostname)) {
 		return signInAgain(
 			envBindings.OAUTH_KV,
 			oauthReqInfo,
 			cookies,
-			"This Wallos URL points at a private or loopback address, which this server does not fetch. Its operator can allow it with ALLOW_PRIVATE_HOSTS.",
+			"This Wallos URL points at a private or loopback address. A Worker reaches public addresses only — expose the instance on a public hostname, through a tunnel if it lives on a home network.",
 			403,
 		);
 	}

@@ -169,7 +169,7 @@ describe("who the sign-in admits", () => {
 				version: "v5.4.2",
 			},
 		]);
-		expect(await kv.get("account:wallos.example.com:7")).not.toBeNull();
+		expect(await kv.get("account:https://wallos.example.com:7")).not.toBeNull();
 	});
 
 	test("turns away a URL that is not Wallos", async () => {
@@ -202,7 +202,7 @@ describe("who the sign-in admits", () => {
 
 	test("refuses a new account once the cap is reached", async () => {
 		const kv = memoryKv();
-		await kv.put("account:other.example.com:1", "already");
+		await kv.put("account:https://other.example.com:1", "already");
 		const completed: PropsCapture[] = [];
 		serveWallos({ id: 2, username: "new", email: "new@example.com" });
 		const response = await postSignIn(kv, envFor(kv, "*", completed, "1"), {
@@ -215,7 +215,7 @@ describe("who the sign-in admits", () => {
 
 	test("lets a known account back in at the cap", async () => {
 		const kv = memoryKv();
-		await kv.put("account:wallos.example.com:2", "already");
+		await kv.put("account:https://wallos.example.com:2", "already");
 		const completed: PropsCapture[] = [];
 		serveWallos({ id: 2, username: "jane", email: "jane@example.com" });
 		const response = await postSignIn(kv, envFor(kv, "*", completed, "1"), {

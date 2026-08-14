@@ -174,7 +174,9 @@ Three properties of the Wallos API shape the client, all of them documented in [
 
 `ALLOWED_HOSTS` decides which Wallos hosts a connection may name: a comma-separated list, `*.example.com`, or `*` for any host. Empty admits nobody. `MAX_ACCOUNTS` caps how many distinct installations-plus-users may ever complete sign-in.
 
-Whatever a sign-in names, the Worker fetches, so private and loopback addresses are refused before any request goes out — RFC1918, CGNAT, link-local (including cloud metadata at `169.254.169.254`), IPv6 unique-local, and `.local` / `.internal` names. An operator tunnelling to a LAN instance sets `ALLOW_PRIVATE_HOSTS=1`.
+Whatever a sign-in names, the Worker fetches, so the URL must be `https` and must not point anywhere private. RFC1918, CGNAT, link-local (cloud metadata at `169.254.169.254` included), IPv6 unique-local and `.local` / `.internal` names are refused at sign-in with an explanation, and the `global_fetch_strictly_public` compatibility flag enforces the same thing at the platform, where a public name resolving to a private address is caught too. An instance on a home network belongs behind a tunnel with a public hostname.
+
+Redirects are refused rather than followed. A `307` or `308` preserves the method and the body, so an instance that answers one would have the request — API key included — replayed at whatever host the `Location` names, which the allowlist never saw.
 
 ## Limits
 

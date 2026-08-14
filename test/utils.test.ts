@@ -77,14 +77,15 @@ describe("normalizeBaseUrl", () => {
 
 	test("refuses credentials and non-http schemes", () => {
 		expect(() => normalizeBaseUrl("https://user:pass@example.com")).toThrow(/credentials/);
-		expect(() => normalizeBaseUrl("javascript:alert(1)")).toThrow(/http/);
+		expect(() => normalizeBaseUrl("javascript:alert(1)")).toThrow(/https/);
+		expect(() => normalizeBaseUrl("http://wallos.example.com")).toThrow(/https/);
 		expect(() => normalizeBaseUrl("not a url")).toThrow(/absolute/);
 	});
 });
 
 describe("accountId", () => {
 	test("keys a grant by host and user id", () => {
-		expect(accountId("https://Wallos.Example.com", 3)).toBe("wallos.example.com:3");
+		expect(accountId("https://Wallos.Example.com", 3)).toBe("https://wallos.example.com:3");
 	});
 
 	test("two installations on one host are two accounts", () => {

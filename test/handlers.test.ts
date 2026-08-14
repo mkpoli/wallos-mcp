@@ -31,7 +31,7 @@ function serveWallos(routes: [RegExp, Route][]) {
 	}) as unknown as typeof fetch;
 }
 
-const OWNER = "wallos.example.com:1";
+const OWNER = "https://wallos.example.com:1";
 
 function makeAgent(account = OWNER, version = "v5.4.2") {
 	const handlers = new Map<string, Handler>();
@@ -43,7 +43,7 @@ function makeAgent(account = OWNER, version = "v5.4.2") {
 	agent.props = {
 		baseUrl: "https://wallos.example.com",
 		apiKey: "owner-key",
-		userId: Number(account.split(":")[1] ?? 1),
+		userId: Number(account.split(":").pop() ?? 1),
 		username: "jane",
 		email: "jane@example.com",
 		version,

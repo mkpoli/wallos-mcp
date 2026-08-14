@@ -36,12 +36,14 @@ const PRIVATE_V4 =
 	/^(?:0|10|127)\.|^169\.254\.|^172\.(?:1[6-9]|2\d|3[01])\.|^192\.168\.|^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./;
 const PRIVATE_SUFFIX = /(?:^|\.)(?:localhost|local|internal|home\.arpa)$/;
 
-// Whatever a sign-in names, the Worker fetches. On a deployment whose allowlist
-// is a whole domain or `*`, that turns the sign-in form into a way to aim
-// requests at whatever the Worker can reach — a cloud metadata service at
-// 169.254.169.254, or a host on the operator's network. Public names are what
-// the allowlist is for; an operator who really does mean a private address
-// (a tunnel to a LAN instance) sets ALLOW_PRIVATE_HOSTS.
+// Whatever a sign-in names, the Worker fetches, so an allowlist of a whole
+// domain or `*` would otherwise aim requests at whatever the Worker can reach —
+// a cloud metadata service at 169.254.169.254, a host on the operator's
+// network. The compatibility flag global_fetch_strictly_public stops those at
+// the platform; this check is the readable half, and it is lexical, so a public
+// name that resolves to a private address is caught by the flag rather than
+// here. An instance on a home network belongs behind a tunnel with a public
+// hostname.
 export function isPrivateHost(hostname: string): boolean {
 	const host = hostname
 		.trim()
@@ -80,7 +82,7 @@ export function parseLimit(raw: string | undefined, fallback: number): number {
 export function accountId(baseUrl: string, userId: number): string {
 	const url = new URL(baseUrl);
 	const path = url.pathname.replace(/\/+$/, "");
-	return `${url.host.toLowerCase()}${path}:${userId}`;
+	return `${url.protocol}//${url.host.toLowerCase()}${path}:${userId}`;
 }
 
 export function accountIdFromProps(props: Props): string {
@@ -102,14 +104,20 @@ export function normalizeBaseUrl(raw: string): string {
 	try {
 		url = new URL(trimmed);
 	} catch {
-		throw new Error("Wallos URL must be an absolute http or https address");
+		throw new Error("Wallos URL must be an absolute https address");
 	}
-	if (url.protocol !== "http:" && url.protocol !== "https:") {
-		throw new Error("Wallos URL must use http or https");
+	// The API key travels in every request body, so plaintext transport hands it
+	// to anything on the path. Wallos behind a reverse proxy that terminates TLS
+	// is still reached over https from here.
+	if (url.protocol !== "https:") {
+		throw new Error("Wallos URL must use https");
 	}
 	if (url.username || url.password) {
 		throw new Error("Wallos URL must not include credentials");
 	}
+	// A trailing dot is the same name to DNS and a different string to an
+	// allowlist, so it is removed before either check sees the host.
+	url.hostname = url.hostname.replace(/\.+$/, "");
 	const path = url.pathname.replace(/\/+$/, "");
 	return `${url.origin}${path === "/" ? "" : path}`;
 }
@@ -120,10 +128,12 @@ export function redactSecret(text: string, secret: string): string {
 }
 
 const SECRET_FIELD =
-	/^(api_key|password|smtp_password|client_secret|token|bot_token|sendkey|user_key|headers|fixer_api_key)$/i;
+	/^(api_key|password|smtp_password|client_secret|token|bot_token|sendkey|user_key|headers|fixer_api_key)$|webhook/i;
 
 // Wallos sometimes returns the real value for a setting that is a secret.
-// Those fields belong in the instance, not in a tool result.
+// Those fields belong in the instance, not in a tool result. A webhook URL is
+// one of them: anything holding a Discord or ntfy webhook can post as the
+// instance, so the address is the credential.
 export function redactSecrets(value: unknown): unknown {
 	if (Array.isArray(value)) return value.map(redactSecrets);
 	if (value && typeof value === "object") {

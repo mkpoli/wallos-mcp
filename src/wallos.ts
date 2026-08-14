@@ -14,6 +14,12 @@ export type CycleFrequency = {
 export type NamedItem = {
 	id: number;
 	name: string;
+	// Whether a subscription still references this row. Wallos deletes without
+	// asking, so a caller that cannot see this cannot warn before orphaning one.
+	in_use?: boolean;
+	// Payment methods carry an enabled flag; household members carry an address.
+	enabled?: number;
+	email?: string;
 };
 
 export type CurrencyItem = NamedItem & {
@@ -119,7 +125,11 @@ function asItems(value: unknown): NamedItem[] {
 		const id = numberField(rec.id, Number.NaN);
 		const name = stringField(rec.name);
 		if (!Number.isFinite(id) || !name) continue;
-		out.push({ id, name });
+		const item: NamedItem = { id, name };
+		if (typeof rec.in_use === "boolean") item.in_use = rec.in_use;
+		if (typeof rec.enabled === "number") item.enabled = rec.enabled;
+		if (typeof rec.email === "string" && rec.email) item.email = rec.email;
+		out.push(item);
 	}
 	return out;
 }
@@ -259,6 +269,28 @@ export function utcToday(now = Date.now()): string {
 	return new Date(now).toISOString().slice(0, 10);
 }
 
+// Wallos reads and writes calendar dates in the instance's own timezone, and
+// v5 exposes that timezone nowhere in the API. A Worker runs in UTC, so a
+// caller east or west of it gets the wrong day for part of every day — 00:30 in
+// Tokyo is still yesterday in UTC. A caller that knows the zone passes it.
+export function todayIn(timeZone?: string, now = Date.now()): string {
+	if (!timeZone) return utcToday(now);
+	try {
+		// en-CA formats as YYYY-MM-DD, which is the wire format Wallos wants.
+		return new Intl.DateTimeFormat("en-CA", {
+			timeZone,
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		}).format(new Date(now));
+	} catch {
+		throw new WallosError(
+			"Unknown timezone",
+			`"${timeZone}" is not an IANA timezone name such as Asia/Tokyo or Europe/Berlin.`,
+		);
+	}
+}
+
 function isLeap(year: number): boolean {
 	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
@@ -306,18 +338,28 @@ export function deriveNextPayment(
 	frequency: number,
 	today = utcToday(),
 ): string {
-	parseIsoDate(startDate);
-	parseIsoDate(today);
+	const start = parseIsoDate(startDate);
+	const now = parseIsoDate(today);
 	if (compareIso(startDate, today) >= 0) return startDate;
-	// Count periods from the original start day. A 31st stays a 31st on long
+	// Skip ahead before walking. A daily subscription started decades ago is
+	// thousands of periods old, and stepping one period at a time from the start
+	// date costs work proportional to the subscription's age. The estimate uses
+	// the longest a period can be, so it always lands at or before the answer
+	// and the walk still decides it.
+	const days = Math.floor(
+		(Date.UTC(now.y, now.m - 1, now.d) - Date.UTC(start.y, start.m - 1, start.d)) / 86_400_000,
+	);
+	const longestPeriod = frequency * (cycle === 1 ? 1 : cycle === 2 ? 7 : cycle === 3 ? 31 : 366);
+	const estimate = Math.max(0, Math.floor(days / longestPeriod) - 1);
+	// Count periods from the original start day, so a 31st stays a 31st on long
 	// months and becomes the last day of a short one.
-	for (let n = 1; n <= 20_000; n++) {
+	for (let n = estimate; n <= estimate + 1_000; n++) {
 		const current = addPeriod(startDate, cycle, frequency, n);
 		if (compareIso(current, today) >= 0) return current;
 	}
 	throw new WallosError(
 		"Could not derive next_payment",
-		"advancing the start date never reached today",
+		"advancing the start date never reached today; pass next_payment explicitly",
 	);
 }
 
@@ -687,6 +729,12 @@ export class WallosClient {
 		try {
 			resp = await fetch(url, {
 				method: "POST",
+				// Redirects are refused rather than followed. 307 and 308 preserve the
+				// method and the body, so an instance that answers one — because it
+				// was misconfigured, or because whoever runs it wants the key — would
+				// have this POST replayed, api_key included, at whatever host the
+				// Location names. The allowlist only ever saw the first URL.
+				redirect: "manual",
 				signal: AbortSignal.timeout(WALLOS_TIMEOUT_MS),
 				headers: { "Content-Type": "application/x-www-form-urlencoded" },
 				body,
@@ -694,6 +742,12 @@ export class WallosClient {
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);
 			throw new WallosError("Wallos request failed", redactSecret(message, this.apiKey));
+		}
+		if (resp.status >= 300 && resp.status < 400) {
+			throw new WallosError(
+				"Wallos redirected the request",
+				`${url} answered ${resp.status}. The base URL should be the address the instance serves on, with the scheme it actually uses.`,
+			);
 		}
 		const text = redactSecret(await readBoundedText(resp.body, MAX_RESPONSE_BYTES), this.apiKey);
 		return {

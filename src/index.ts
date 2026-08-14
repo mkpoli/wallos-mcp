@@ -20,7 +20,7 @@ import {
 	parseBillingPeriodOptional,
 	type ResolvedIds,
 	resolveSubscriptionRefs,
-	utcToday,
+	todayIn,
 	WallosClient,
 	WallosError,
 } from "./wallos";
@@ -297,14 +297,21 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 				inactive: z.boolean().optional(),
 				cancellation_date: z.string().optional(),
 				replacement_subscription_id: z.number().int().positive().optional(),
+				timezone: z
+					.string()
+					.optional()
+					.describe(
+						"IANA name, e.g. Asia/Tokyo. Decides what today means for start_date and the derived next_payment; UTC otherwise",
+					),
 			},
 			async (args) =>
 				this.run(async (client) => {
 					const ids = await resolveSubscriptionRefs(client, args, true);
 					const period = parseBillingPeriod(args);
-					const start = args.start_date ?? utcToday();
+					const today = todayIn(args.timezone);
+					const start = args.start_date ?? today;
 					const next =
-						args.next_payment ?? deriveNextPayment(start, period.cycle, period.frequency);
+						args.next_payment ?? deriveNextPayment(start, period.cycle, period.frequency, today);
 					return client.setSubscription(
 						subscriptionWriteFields("add", args, ids, period, start, next),
 					);
@@ -362,21 +369,30 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 			{
 				month: z.number().int().min(1).max(12).optional(),
 				year: z.number().int().min(1970).max(2100).optional(),
+				timezone: z
+					.string()
+					.optional()
+					.describe("IANA name deciding which month is the current one; UTC otherwise"),
 			},
-			async ({ month, year }) =>
+			async ({ month, year, timezone }) =>
 				this.run((client) => {
-					const now = new Date();
+					const today = todayIn(timezone);
 					return client.getMonthlyCost(
-						month ?? now.getUTCMonth() + 1,
-						year ?? now.getUTCFullYear(),
+						month ?? Number(today.slice(5, 7)),
+						year ?? Number(today.slice(0, 4)),
 					);
 				}),
 		);
 
 		this.server.tool(
 			"get_ical_feed",
-			`iCalendar feed of active subscriptions on ${props.username}'s Wallos`,
-			{ convert_currency: z.boolean().optional() },
+			`iCalendar feed of active subscriptions on ${props.username}'s Wallos. Prices come back in each subscription's own currency: Wallos accepts convert_currency here and then builds the calendar from an unconverted second read, through 5.4.2 — use list_subscriptions with convert_currency for comparable amounts.`,
+			{
+				convert_currency: z
+					.boolean()
+					.optional()
+					.describe("Passed through; Wallos currently ignores it for this endpoint"),
+			},
 			async ({ convert_currency }) =>
 				this.run(async (client) => ({
 					ical: await client.getIcalFeed(convert_currency === true),
@@ -413,6 +429,21 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 						throw new WallosError(
 							"Nothing to set",
 							"Pass monthly_budget, period_budget, budget_period_type, or budget_period_anchor_date.",
+						);
+					}
+					// Wallos rewrites the whole period configuration whenever any part of
+					// it arrives, defaulting what is missing. Changing an amount alone
+					// would move a weekly budget anchored in the past to monthly, anchored
+					// today, and report success. The three travel together or not at all.
+					const period = [
+						args.period_budget,
+						args.budget_period_type,
+						args.budget_period_anchor_date,
+					];
+					if (period.some((v) => v !== undefined) && period.some((v) => v === undefined)) {
+						throw new WallosError(
+							"Incomplete period budget",
+							"period_budget, budget_period_type and budget_period_anchor_date are stored as one setting: send all three, or read the current values with get_period_budget and pass them back unchanged.",
 						);
 					}
 					return this.run((client) => client.setBudget(args));
@@ -611,7 +642,16 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 				hover_color: z.string().optional(),
 				css: z.string().optional(),
 			},
-			async (args) => this.run((client) => client.setSettings(settingsFields(args))),
+			async (args) => {
+				const fields = settingsFields(args);
+				if (Object.keys(fields).length === 0) {
+					throw new WallosError(
+						"Nothing to update",
+						"Pass at least one setting. Wallos answers an empty write with success and changes nothing.",
+					);
+				}
+				return this.run((client) => client.setSettings(fields));
+			},
 		);
 
 		this.server.tool(
@@ -630,9 +670,11 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 
 		this.server.tool(
 			"update_fixer_settings",
-			`Update ${props.username}'s Wallos exchange-rate provider. An empty fixer_api_key clears the stored key.`,
+			`Update ${props.username}'s Wallos exchange-rate provider. The key is required on every call, because Wallos stores what it is given and treats an absent key as an instruction to clear the stored one — changing only the provider would delete it. Pass an empty string to clear it deliberately.`,
 			{
-				fixer_api_key: z.string().optional(),
+				fixer_api_key: z
+					.string()
+					.describe("The provider's API key; an empty string clears the stored settings"),
 				provider: z
 					.union([z.literal(0), z.literal(1)])
 					.optional()
@@ -641,7 +683,7 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 			async ({ fixer_api_key, provider }) =>
 				this.run((client) =>
 					client.setFixer({
-						...(fixer_api_key !== undefined ? { fixer_api_key } : {}),
+						fixer_api_key,
 						...(provider !== undefined ? { provider } : {}),
 					}),
 				),

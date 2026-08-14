@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+	addPeriod,
 	deriveNextPayment,
 	encodeForm,
 	parseBillingPeriod,
 	parseBillingPeriodString,
 	parseWallosJson,
 	resolveSubscriptionRefs,
+	todayIn,
 	WallosClient,
 	WallosError,
 } from "../src/wallos";
@@ -249,5 +251,68 @@ describe("name resolution", () => {
 		const created = calls.find((c) => c.url.includes("set_currencies"));
 		expect(created?.body.get("code")).toBe("JPY");
 		expect(created?.body.get("action")).toBe("add");
+	});
+});
+
+// A deliberately slow reference: step one period at a time from the start date.
+// The implementation skips ahead for speed, and this is what it must agree with.
+function firstPeriodOnOrAfter(
+	startDate: string,
+	cycle: 1 | 2 | 3 | 4,
+	frequency: number,
+	today: string,
+): string {
+	for (let n = 0; n < 100_000; n++) {
+		const candidate = addPeriod(startDate, cycle, frequency, n);
+		if (candidate >= today) return candidate;
+	}
+	throw new Error("reference never reached today");
+}
+
+describe("deriveNextPayment over long spans", () => {
+	test("agrees with stepping one period at a time, from 1970 to now", () => {
+		for (const [cycle, frequency] of [
+			[1, 1],
+			[1, 3],
+			[2, 1],
+			[2, 2],
+			[3, 1],
+			[3, 6],
+			[4, 1],
+		] as const) {
+			expect(deriveNextPayment("1970-01-01", cycle, frequency, "2026-08-14")).toBe(
+				firstPeriodOnOrAfter("1970-01-01", cycle, frequency, "2026-08-14"),
+			);
+		}
+	});
+
+	test("month ends, leap days and year boundaries", () => {
+		expect(deriveNextPayment("2020-01-31", 3, 1, "2026-08-14")).toBe("2026-08-31");
+		expect(deriveNextPayment("2020-02-29", 4, 1, "2026-08-14")).toBe("2027-02-28");
+		expect(deriveNextPayment("2026-08-03", 2, 1, "2026-08-14")).toBe("2026-08-17");
+		expect(deriveNextPayment("2025-12-31", 3, 1, "2026-01-01")).toBe("2026-01-31");
+	});
+
+	test("a start date in the future is its own next payment", () => {
+		expect(deriveNextPayment("2027-01-01", 3, 1, "2026-08-14")).toBe("2027-01-01");
+	});
+});
+
+describe("todayIn", () => {
+	// 2026-08-14T15:30Z is already the 15th in Tokyo and still the 14th in UTC.
+	const at = Date.UTC(2026, 7, 14, 15, 30);
+
+	test("reads the calendar date in the named zone", () => {
+		expect(todayIn("Asia/Tokyo", at)).toBe("2026-08-15");
+		expect(todayIn("UTC", at)).toBe("2026-08-14");
+		expect(todayIn("America/Los_Angeles", at)).toBe("2026-08-14");
+	});
+
+	test("falls back to UTC when no zone is given", () => {
+		expect(todayIn(undefined, at)).toBe("2026-08-14");
+	});
+
+	test("refuses a name that is not a timezone", () => {
+		expect(() => todayIn("Mars/Olympus", at)).toThrow(/IANA/);
 	});
 });
