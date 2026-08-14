@@ -1084,3 +1084,13 @@ Example response:
   grouped by thousands separator ("88,242.55") and `localized_monthly_cost` is
   fully formatted ("¥88,243"). Neither parses as a number without stripping the
   separators.
+- `get_subscriptions.php` reads the payment filter as `payment`; the
+  `payment_method` its docblock names is never read, and passing it returns the
+  unfiltered list with `success: true`.
+- `get_ical_feed.php` accepts `convert_currency` and builds the calendar from a
+  second, unconverted read, so prices come back in each subscription's own
+  currency whatever the flag says.
+- `all-user-subscription=1` combined with any filter builds `SELECT * FROM
+  subscriptions AND …`, which fatals.
+
+The last three are reported upstream as ellite/Wallos#1157, #1158 and #1159.
