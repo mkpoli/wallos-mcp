@@ -4,51 +4,16 @@
 // navigation rather than a screenshot of it: the point is to show where the key
 // lives without the reader having to translate prose into clicks.
 
-import { isRtl, LOCALES, type Strings, strings } from "./i18n";
+import { isRtl, LOCALES, strings } from "./i18n";
+import { DEMO_CSS, demo, FONT_FACES, MARK, TOKENS } from "./ui";
 import { sanitizeText } from "./workers-oauth-utils";
 
 // Wallos's own tokens, read from its stylesheets and rewritten here. Wallos is
 // GPL-3.0; nothing is copied from it, and matching a palette is not copying.
 const CSS = `
-:root {
-  --brand: #2563EB;
-  --brand-hover: #1D4ED8;
-  --brand-soft: #93C5FD;
-  --bg: #F2F4F8;
-  --panel: #FFFFFF;
-  --border: #E7EAF0;
-  --ink: #1C2434;
-  --muted: #5A6478;
-  --field: #FFFFFF;
-  --field-border: #D7DCE5;
-  --shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 30px -18px rgba(15,23,42,.18);
-  --warn-bg: #FFFBEB;
-  --warn-border: #FDE68A;
-  --warn-ink: #4B3F14;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0F1218;
-    --panel: #171B23;
-    --border: #262C38;
-    --ink: #E4E8F1;
-    --muted: #8B94A7;
-    --field: #1F2530;
-    --field-border: #38404F;
-    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 30px -18px rgba(0,0,0,.55);
-    --warn-bg: #241E0B;
-    --warn-border: #4A3D12;
-    --warn-ink: #F5E6B8;
-  }
-}
-* { box-sizing: border-box; }
+${TOKENS}
+${DEMO_CSS}
 html, body { height: 100%; }
-body {
-  margin: 0; background: var(--bg); color: var(--ink);
-  font-family: Barlow, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-               "Hiragino Sans", "Noto Sans JP", "Noto Sans SC", "Noto Sans KR", sans-serif;
-  font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
-}
 .split { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 100%; }
 .brand {
   position: relative; overflow: hidden; padding: 44px 48px;
@@ -203,33 +168,6 @@ select {
 }
 `;
 
-const MENU_ROWS = 6;
-const PROFILE_ROW = 4;
-
-function demo(t: Strings): string {
-	// Eight rows stand in for the instance's own menu; only the one that matters
-	// is labelled, so the drawing cannot be mistaken for a real screenshot.
-	const rows = Array.from({ length: MENU_ROWS }, (_, i) =>
-		i === PROFILE_ROW
-			? `<div class="pick"><i></i>${sanitizeText(t.menuProfile)}</div>`
-			: `<div><i></i><span class="bar" style="width:${50 + ((i * 17) % 38)}%"></span></div>`,
-	).join("");
-	return `<div class="demo" role="img" aria-label="${sanitizeText(t.guideTitle)}">
-  <div class="demo-bar"><div class="avatar"></div><span class="caret">▾</span></div>
-  <div class="demo-body">
-    <div class="app"><div class="app-row"></div><div class="app-row"></div><div class="app-row"></div></div>
-    <div class="menu">${rows}<div class="cursor"></div></div>
-    <div class="profile">
-      <h4>${sanitizeText(t.apiKeyHeading)}</h4>
-      <div class="keyrow">
-        <div class="keyfield"><span>3f9a2c7e5b1d84a6c0f2e9b7d413a8c5</span></div>
-        <div class="keybtn">${sanitizeText(t.regenerate)}</div>
-      </div>
-    </div>
-  </div>
-</div>`;
-}
-
 export function signInPage(opts: {
 	csrfToken: string;
 	stateToken: string;
@@ -257,29 +195,13 @@ export function signInPage(opts: {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${sanitizeText(t.title)}</title>
-<style>
-@font-face { font-family: Barlow; font-style: normal; font-weight: 400; font-display: swap;
-  src: url(/_font/barlow-400-latin.woff2) format("woff2"); }
-@font-face { font-family: Barlow; font-style: normal; font-weight: 400; font-display: swap;
-  src: url(/_font/barlow-400-latin-ext.woff2) format("woff2");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: Barlow; font-style: normal; font-weight: 600; font-display: swap;
-  src: url(/_font/barlow-600-latin.woff2) format("woff2"); }
-@font-face { font-family: Barlow; font-style: normal; font-weight: 600; font-display: swap;
-  src: url(/_font/barlow-600-latin-ext.woff2) format("woff2");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2C60-2C7F, U+A720-A7FF; }
-${CSS}</style>
+<style>${FONT_FACES}${CSS}</style>
 </head>
 <body>
 <div class="split">
   <aside class="brand">
     <div class="mark">
-      <svg width="30" height="30" viewBox="0 0 92 92" fill="none" aria-hidden="true">
-        <path d="M21.6 10.9 A38 38 0 1 0 73.8 14.1" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".8" fill="none"/>
-        <path d="M67 5.4 L80 10.2 L71 18.8 Z" fill="#fff" opacity=".8"/>
-        <rect x="24" y="24" width="44" height="33" rx="7" stroke="#fff" stroke-width="5" fill="none"/>
-        <path d="M28 34 H64" stroke="#fff" stroke-width="4" opacity=".55"/>
-      </svg>
+      ${MARK}
       wallos-mcp
     </div>
     <div>
@@ -290,7 +212,7 @@ ${CSS}</style>
         <li class="s3"><span class="n">3</span>${sanitizeText(t.step3)}</li>
       </ol>
     </div>
-    ${demo(t)}
+    ${demo(t, sanitizeText)}
   </aside>
 
   <main class="formside">

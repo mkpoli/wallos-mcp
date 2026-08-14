@@ -30,16 +30,10 @@
 			"binding": "OAUTH_KV"
 		}
 	],
-	// The setup guide is imported as a string. fallthrough:false says this rule
-	// replaces wrangler's default Text rule rather than shadowing it by accident,
-	// which is what the build otherwise warns about.
-	"rules": [
-		{ "type": "Text", "globs": ["**/*.html"], "fallthrough": false },
-		// Barlow is what Wallos sets its own interface in. Serving it from the
-		// Worker keeps the connect page free of a request to a font CDN, on the
-		// one page where somebody is typing a credential.
-		{ "type": "Data", "globs": ["**/*.woff2"], "fallthrough": false }
-	],
+	// Barlow is what Wallos sets its own interface in. Serving it from the Worker
+	// keeps the pages free of a request to a font CDN, on the one page where
+	// somebody is typing a credential.
+	"rules": [{ "type": "Data", "globs": ["**/*.woff2"], "fallthrough": false }],
 	"vars": {
 		// How many distinct Wallos accounts may ever complete sign-in.
 		"MAX_ACCOUNTS": "25",

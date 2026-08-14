@@ -5,7 +5,7 @@ import barlow400 from "../assets/barlow-400-latin.woff2";
 import barlow400ext from "../assets/barlow-400-latin-ext.woff2";
 import barlow600 from "../assets/barlow-600-latin.woff2";
 import barlow600ext from "../assets/barlow-600-latin-ext.woff2";
-import setupGuide from "../docs/index.html";
+import { homePage } from "./home";
 import { pickLocale } from "./i18n";
 import { signInPage } from "./sign-in";
 import {
@@ -66,20 +66,7 @@ app.get("/_font/:name", (c) => {
 	});
 });
 
-const guide = setupGuide as unknown as string;
-
-// The same page ships with every deployment, so the address it tells people to
-// connect to is the one they reached it on rather than a placeholder they would
-// have to translate.
-app.get("/", (c) => {
-	const origin = new URL(c.req.url).origin;
-	return new Response(guide.replaceAll("{{ORIGIN}}", origin), {
-		headers: {
-			"Content-Type": "text/html; charset=utf-8",
-			"Cache-Control": "public, max-age=300",
-		},
-	});
-});
+app.get("/", (c) => homePage(new URL(c.req.url).origin));
 
 app.get("/authorize", async (c) => {
 	let oauthReqInfo: AuthRequest;

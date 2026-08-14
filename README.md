@@ -104,7 +104,7 @@ claude mcp add --transport http wallos https://<your-host>/mcp
 
 Run `/mcp` in Claude Code to sign in: the page asks for the Wallos URL and the API key. In claude.ai it is **Settings → Connectors → Add custom connector** with the same URL. Any single-segment label after `/mcp/` — `/mcp/household` — is a separate connection with its own grant, which is how one deployment serves two trackers to clients that reject two servers sharing a URL.
 
-Your deployment serves a setup guide at `https://<your-host>/`.
+Your deployment serves its own guide at `https://<your-host>/`, in the same design, naming the address it was reached on.
 
 </details>
 
@@ -169,7 +169,7 @@ Your deployment serves a setup guide at `https://<your-host>/`.
 
 ### The connect page
 
-Signing in is the one moment a Wallos user leaves their own instance, so the page they land on borrows Wallos's proportions, palette and typeface: the split brand panel, `#2563EB`, Barlow. The font is served by the Worker itself, because a page where somebody is typing an API key should not also be calling a font CDN.
+Both pages a person sees — the guide at `/` and the sign-in at `/authorize` — are built from one set of tokens in `src/ui.ts`. Signing in is the moment a Wallos user leaves their own instance, so what they land on borrows Wallos's proportions, palette and typeface: the split brand panel, `#2563EB`, Barlow. The font is served by the Worker itself, because a page where somebody is typing an API key should not also be calling a font CDN.
 
 The left panel animates where the key actually is — the menu beside your name, Profile, the API Key field — as a drawing of that navigation rather than a screenshot of it, with captions that light up in step. `prefers-reduced-motion` stops the motion and leaves the menu open. Once you type your instance URL, a link to that instance's own `profile.php` appears beside the key field.
 
