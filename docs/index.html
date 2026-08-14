@@ -108,7 +108,7 @@
   <p class="tagline">Your self-hosted Wallos subscription tracker, served to any MCP client, from your own Cloudflare Worker.</p>
   <div class="pills">
     <span class="pill">OAuth 2.1 + PKCE</span>
-    <span class="pill">Wallos v5+</span>
+    <span class="pill">Wallos 5.0+</span>
     <span class="pill">several instances</span>
     <span class="pill">MIT</span>
   </div>
@@ -122,7 +122,18 @@
   <div class="box"><b>your Wallos</b>one account per grant</div>
 </div>
 
-<p>Each <em>connection</em> signs in separately, by naming a Wallos instance and pasting that instance's API key. The key is held in the encrypted grant inside your own Cloudflare KV namespace, and is never sent to the MCP client. Connecting twice binds two accounts — a personal instance and a household one, for example.</p>
+<p>Each <em>connection</em> signs in separately, by naming a Wallos instance and pasting that instance's API key. The key is held in the encrypted grant inside this deployment's Cloudflare KV namespace, and is never sent to the MCP client. Connecting twice binds two accounts — a personal instance and a household one, for example.</p>
+
+<h2><span class="n">0</span> Connect to this deployment</h2>
+<p>Already running Wallos 5.0 or newer, reachable over HTTPS? Point a client here and sign in.</p>
+
+<pre>claude mcp add --transport http wallos {{ORIGIN}}/mcp</pre>
+
+<p>In claude.ai it is <b>Settings → Connectors → Add custom connector</b> with <code>{{ORIGIN}}/mcp</code>. Leave any client ID and secret fields empty.</p>
+
+<div class="note">
+  Your API key is stored, encrypted, by whoever operates this deployment, and it carries the same authority over your subscriptions as your Wallos password. Regenerating the key in Wallos ends that access immediately. The rest of this page is for running your own copy instead, which takes about five minutes and keeps the key on your own account.
+</div>
 
 <h2><span class="n">1</span> Get your Wallos API key</h2>
 <p>In Wallos, open <b>Settings</b> and find the <b>API key</b> field on your own profile. Generate one if the field is empty, and copy it.</p>
@@ -136,10 +147,9 @@
 
 <pre>git clone https://github.com/mkpoli/wallos-mcp &amp;&amp; cd wallos-mcp
 bun install
-bunx wrangler kv namespace create OAUTH_KV
-bunx wrangler secret put COOKIE_ENCRYPTION_KEY   # openssl rand -hex 32
-bunx wrangler secret put ALLOWED_HOSTS
-bun run deploy</pre>
+bun run setup</pre>
+
+<p><code>bun run setup</code> asks which domain to answer on, creates the KV namespace, takes <code>ALLOWED_HOSTS</code>, generates a cookie key, and deploys. Re-running it to rotate one secret is safe.</p>
 
 <h2><span class="n">3</span> Decide which instances may be reached</h2>
 <p><code>ALLOWED_HOSTS</code> is the list of Wallos hosts a connection is allowed to name. The MCP endpoint is public and clients register themselves, so this is what stops a stranger from pointing your deployment at somebody else's instance.</p>

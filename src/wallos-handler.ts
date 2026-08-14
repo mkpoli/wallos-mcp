@@ -42,16 +42,18 @@ const app = new Hono<{ Bindings: Env & { OAUTH_PROVIDER: OAuthHelpers } }>();
 
 const guide = setupGuide as unknown as string;
 
-app.get(
-	"/",
-	() =>
-		new Response(guide, {
-			headers: {
-				"Content-Type": "text/html; charset=utf-8",
-				"Cache-Control": "public, max-age=3600",
-			},
-		}),
-);
+// The same page ships with every deployment, so the address it tells people to
+// connect to is the one they reached it on rather than a placeholder they would
+// have to translate.
+app.get("/", (c) => {
+	const origin = new URL(c.req.url).origin;
+	return new Response(guide.replaceAll("{{ORIGIN}}", origin), {
+		headers: {
+			"Content-Type": "text/html; charset=utf-8",
+			"Cache-Control": "public, max-age=300",
+		},
+	});
+});
 
 app.get("/authorize", async (c) => {
 	let oauthReqInfo: AuthRequest;
@@ -459,9 +461,9 @@ function signInPage(opts: {
     border-radius: 6px; font: inherit;
   }
   .hint { color: #555; font-size: .92rem; margin: 0 0 1rem; }
-  .custody { background: #f6f8fa; border: 1px solid #e5e7eb; border-radius: 6px;
-             padding: .8rem 1rem; font-size: .88rem; color: #444; margin: 1.25rem 0 0; }
-  .custody a { color: #0070f3; }
+  .custody { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+             padding: .8rem 1rem; font-size: .88rem; color: #4b3f14; margin: 0 0 1.25rem; }
+  .custody a { color: #8a6d0b; }
   .error { background: #fff1f0; border: 1px solid #f5c2c0; color: #8a1f11;
            border-radius: 6px; padding: .75rem 1rem; }
   .button { margin-top: 1.5rem; padding: .75rem 1.5rem; border: none; border-radius: 6px;
@@ -472,6 +474,10 @@ function signInPage(opts: {
 <div class="card">
   <h1>Connect a Wallos account</h1>
   <p class="hint">The base URL of your Wallos instance, and the API key from Settings → your profile.</p>
+  <p class="custody">This key is stored, encrypted, by whoever runs this deployment, and it carries
+  the same authority over your subscriptions as your password. Regenerating the key in Wallos ends
+  that access immediately. To keep it on your own infrastructure instead, deploy this server
+  yourself — <a href="https://github.com/mkpoli/wallos-mcp">github.com/mkpoli/wallos-mcp</a>.</p>
   ${error}
   <form method="post" action="/sign-in">
     <input type="hidden" name="csrf_token" value="${sanitizeText(opts.csrfToken)}">
@@ -482,10 +488,6 @@ function signInPage(opts: {
     <input id="api_key" name="api_key" type="password" required autocomplete="off">
     <button type="submit" class="button">Sign in</button>
   </form>
-  <p class="custody">This key is stored, encrypted, by whoever runs this deployment, and it carries
-  the same authority over your subscriptions as your password. Regenerating the key in Wallos ends
-  that access immediately. To keep it on your own infrastructure instead, deploy this server
-  yourself — <a href="https://github.com/mkpoli/wallos-mcp">github.com/mkpoli/wallos-mcp</a>.</p>
 </div>
 </body>
 </html>`;
