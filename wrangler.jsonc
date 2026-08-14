@@ -26,7 +26,10 @@
 			"binding": "OAUTH_KV"
 		}
 	],
-	"rules": [{ "type": "Text", "globs": ["**/*.html"] }],
+	// The setup guide is imported as a string. fallthrough:false says this rule
+	// replaces wrangler's default Text rule rather than shadowing it by accident,
+	// which is what the build otherwise warns about.
+	"rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": false }],
 	"vars": {
 		// How many distinct Wallos accounts may ever complete sign-in.
 		"MAX_ACCOUNTS": "25",
