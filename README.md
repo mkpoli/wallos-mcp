@@ -13,7 +13,8 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP-6E56CF)](https://modelcontextprotocol.io/)
 [![OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1_+_PKCE-2ea44f)](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1)
 [![33 tools](https://img.shields.io/badge/tools-33-0b7285)](#what-it-can-do)
-[![tests](https://img.shields.io/badge/tests-88_passing-success?logo=bun&logoColor=white)](#how-it-was-tested)
+[![tests](https://img.shields.io/badge/tests-96_passing-success?logo=bun&logoColor=white)](#how-it-was-tested)
+[![Wallos 5.0+](https://img.shields.io/badge/Wallos-5.0%2B-0d9488)](#which-wallos-it-works-with)
 
 </div>
 
@@ -21,7 +22,11 @@
 
 It runs as a remote server on **your own Cloudflare Worker**, so the same connection answers from Claude Code on a laptop, claude.ai in a browser, and Claude on a phone. Each connection signs in to **one** Wallos account by naming an instance and pasting its API key, and that key stays in **your** Cloudflare account.
 
-Wallos gained an API-key HTTP API in **v5.0** (July 2026), with `action=add|edit|delete` write endpoints for subscriptions and every master-data list. This server is built on that API alone: no password, no session cookie, no scraped form post.
+### Which Wallos it works with
+
+**Wallos v5.0.0 or newer** — that release, on 2026-07-11, introduced the API-key HTTP API with `action=add|edit|delete` write endpoints for subscriptions and every master-data list. This server is built on that API alone: no password, no session cookie, no scraped form post. Of the 27 endpoints it calls, 25 exist from v5.0.0; `get_period_budget` and `update_budget` arrived in **v5.3.0** and are simply absent from the tool list on anything older.
+
+A sign-in naming an instance below 5.0.0 is refused with its version, rather than binding a connection whose every call would fail. Verified end to end against **v5.2.0** and **v5.4.2**.
 
 ---
 
@@ -42,9 +47,34 @@ Both existing servers predate the v5 API. The endpoint claims above are checkabl
 
 ---
 
-## Deploy it
+## Use it
 
-You need a Cloudflare account, [bun](https://bun.sh), and a Wallos instance reachable over HTTPS.
+### Connect to the hosted deployment
+
+```sh
+claude mcp add --transport http wallos https://wallos-mcp.mkpo.li/mcp
+```
+
+Sign in with your instance URL and API key. The key is held encrypted in that deployment's KV, which means trusting whoever runs it with the same authority your Wallos password carries; regenerating the key in Wallos ends that access at once. Anyone who would rather not make that trade deploys their own below — it is the same software and takes about five minutes.
+
+### Or deploy your own
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mkpoli/wallos-mcp)
+
+The button copies the repository into your GitHub account, creates the KV namespace and the Durable Object, and asks for the two secrets.
+
+From a terminal instead — you need a Cloudflare account, [bun](https://bun.sh), and a Wallos instance reachable over HTTPS:
+
+```sh
+git clone https://github.com/mkpoli/wallos-mcp && cd wallos-mcp
+bun install
+bun run setup
+```
+
+`bun run setup` asks which domain to answer on, creates or reuses the KV namespace, takes `ALLOWED_HOSTS`, generates a cookie key, and deploys. The first two answers land in `wrangler.local.jsonc`, which git ignores, so `wrangler.jsonc` names nobody's namespace and nobody's domain and a clone deploys anywhere. Re-running it to rotate one secret is safe.
+
+<details>
+<summary>The individual commands, if you would rather not run a script</summary>
 
 ### 1 · Copy your Wallos API key
 
@@ -55,7 +85,7 @@ In Wallos, open **Settings** and find **API key** on your own profile. Generate 
 ```sh
 git clone https://github.com/mkpoli/wallos-mcp && cd wallos-mcp
 bun install
-bunx wrangler kv namespace create OAUTH_KV
+bunx wrangler kv namespace create wallos-mcp-oauth
 bunx wrangler secret put COOKIE_ENCRYPTION_KEY   # openssl rand -hex 32
 bunx wrangler secret put ALLOWED_HOSTS           # e.g. wallos.example.com
 bun run deploy
@@ -74,6 +104,8 @@ claude mcp add --transport http wallos https://<your-host>/mcp
 Run `/mcp` in Claude Code to sign in: the page asks for the Wallos URL and the API key. In claude.ai it is **Settings → Connectors → Add custom connector** with the same URL. Any single-segment label after `/mcp/` — `/mcp/household` — is a separate connection with its own grant, which is how one deployment serves two trackers to clients that reject two servers sharing a URL.
 
 Your deployment serves a setup guide at `https://<your-host>/`.
+
+</details>
 
 ---
 
@@ -194,7 +226,7 @@ Redirects are refused rather than followed. A `307` or `308` preserves the metho
 
 ## How it was tested
 
-`bun test` runs 88 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist and the private-address refusal, the account cap, and grant isolation between sessions.
+`bun test` runs 96 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, the account cap, and grant isolation between sessions.
 
 `scripts/e2e.ts` runs the client against a real instance, which is where the wire contract is actually settled:
 
@@ -203,7 +235,7 @@ WALLOS_URL=https://wallos.example.com WALLOS_API_KEY=... bun run scripts/e2e.ts
 WALLOS_URL=... WALLOS_API_KEY=... bun run scripts/e2e.ts --write
 ```
 
-The read pass checks versions, users, master data, filters, costs and settings, and that a wrong key is refused. The `--write` pass creates a category and a subscription, edits the subscription and reads the change back, then deletes both and confirms they are gone. It has been run against Wallos v5.2.0.
+The read pass checks versions, users, master data, filters, costs and settings, and that a wrong key is refused. The `--write` pass creates a category and a subscription, edits the subscription and reads the change back, then deletes both and confirms they are gone. It has been run against Wallos v5.2.0 and v5.4.2.
 
 ## Development
 

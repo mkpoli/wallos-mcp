@@ -30,7 +30,8 @@
 		"check": "biome check src test scripts && tsc --noEmit",
 		"fix": "biome check --write src test scripts",
 		"test": "bun test",
-		"types": "wrangler types"
+		"types": "wrangler types",
+		"setup": "bun run scripts/setup.ts"
 	},
 	"cloudflare": {
 		"bindings": {

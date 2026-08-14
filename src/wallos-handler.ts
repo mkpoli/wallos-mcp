@@ -9,6 +9,7 @@ import {
 	isHostAllowed,
 	isPrivateHost,
 	isUnderAccountCap,
+	meetsMinimum,
 	normalizeBaseUrl,
 	type Props,
 	parseLimit,
@@ -350,6 +351,9 @@ async function bindWallosUser(
 	if (!Number.isInteger(userId) || userId <= 0 || !username) {
 		return "Wallos returned a user record this server cannot bind.";
 	}
+	if (!meetsMinimum(version)) {
+		return `This Wallos is ${version}. The API this server uses arrived in 5.0.0, so every tool would fail against it — upgrade the instance first.`;
+	}
 	return { userId, username, email, version };
 }
 
@@ -455,6 +459,9 @@ function signInPage(opts: {
     border-radius: 6px; font: inherit;
   }
   .hint { color: #555; font-size: .92rem; margin: 0 0 1rem; }
+  .custody { background: #f6f8fa; border: 1px solid #e5e7eb; border-radius: 6px;
+             padding: .8rem 1rem; font-size: .88rem; color: #444; margin: 1.25rem 0 0; }
+  .custody a { color: #0070f3; }
   .error { background: #fff1f0; border: 1px solid #f5c2c0; color: #8a1f11;
            border-radius: 6px; padding: .75rem 1rem; }
   .button { margin-top: 1.5rem; padding: .75rem 1.5rem; border: none; border-radius: 6px;
@@ -475,6 +482,10 @@ function signInPage(opts: {
     <input id="api_key" name="api_key" type="password" required autocomplete="off">
     <button type="submit" class="button">Sign in</button>
   </form>
+  <p class="custody">This key is stored, encrypted, by whoever runs this deployment, and it carries
+  the same authority over your subscriptions as your password. Regenerating the key in Wallos ends
+  that access immediately. To keep it on your own infrastructure instead, deploy this server
+  yourself — <a href="https://github.com/mkpoli/wallos-mcp">github.com/mkpoli/wallos-mcp</a>.</p>
 </div>
 </body>
 </html>`;

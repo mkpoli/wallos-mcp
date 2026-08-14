@@ -5,6 +5,7 @@ import {
 	isHostAllowed,
 	isPrivateHost,
 	isUnderAccountCap,
+	meetsMinimum,
 	normalizeBaseUrl,
 	parseLimit,
 	redactSecret,
@@ -154,5 +155,19 @@ describe("redactSecrets", () => {
 		}) as { user: { username: string; api_key: string } };
 		expect(out.user.username).toBe("jane");
 		expect(out.user.api_key).toBe("********");
+	});
+});
+
+describe("meetsMinimum", () => {
+	test("5.0.0 is the floor", () => {
+		expect(meetsMinimum("v5.0.0")).toBe(true);
+		expect(meetsMinimum("5.2.0")).toBe(true);
+		expect(meetsMinimum("v5.4.2")).toBe(true);
+		expect(meetsMinimum("v4.9.9")).toBe(false);
+		expect(meetsMinimum("v3.0.0")).toBe(false);
+	});
+
+	test("an unreadable version is not treated as ancient", () => {
+		expect(meetsMinimum("unknown")).toBe(true);
 	});
 });

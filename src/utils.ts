@@ -210,6 +210,12 @@ export async function readBoundedBody(request: Request, limit: number): Promise<
 	return body;
 }
 
+// Wallos 5.0.0 is the release that introduced the API-key HTTP API this server
+// is built on: every endpoint it calls exists from there, bar the two budget
+// ones below. Older instances expose no write API at all, so a sign-in against
+// one would bind a grant whose every tool fails.
+export const MIN_WALLOS: [number, number, number] = [5, 0, 0];
+
 // first version that ships api/subscriptions/get_period_budget.php
 export const PERIOD_BUDGET_SINCE: [number, number, number] = [5, 3, 0];
 
@@ -236,4 +242,12 @@ export function versionAtLeast(raw: string, min: [number, number, number]): bool
 
 export function hasPeriodBudget(version: string): boolean {
 	return versionAtLeast(version, PERIOD_BUDGET_SINCE);
+}
+
+// An instance that reports no version at all is let through: api/status/version.php
+// exists from 5.0.0 too, so a missing answer is more likely a proxy in the way
+// than a genuinely ancient Wallos, and get_user.php has already succeeded by then.
+export function meetsMinimum(version: string): boolean {
+	if (parseVersion(version) === null) return true;
+	return versionAtLeast(version, MIN_WALLOS);
 }
