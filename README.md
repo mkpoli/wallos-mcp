@@ -13,7 +13,8 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP-6E56CF)](https://modelcontextprotocol.io/)
 [![OAuth 2.1](https://img.shields.io/badge/auth-OAuth_2.1_+_PKCE-2ea44f)](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1)
 [![33 tools](https://img.shields.io/badge/tools-33-0b7285)](#what-it-can-do)
-[![tests](https://img.shields.io/badge/tests-98_passing-success?logo=bun&logoColor=white)](#how-it-was-tested)
+[![tests](https://img.shields.io/badge/tests-105_passing-success?logo=bun&logoColor=white)](#how-it-was-tested)
+[![28 languages](https://img.shields.io/badge/languages-28-2563EB)](#the-connect-page)
 [![Wallos 5.0+](https://img.shields.io/badge/Wallos-5.0%2B-0d9488)](#which-wallos-it-works-with)
 
 </div>
@@ -166,6 +167,14 @@ Your deployment serves a setup guide at `https://<your-host>/`.
 
 ᵛ registered when the instance reports Wallos 5.3 or newer · ᵃ registered when `ADMIN_TOOLS` is `1` **and** the bound key passes an admin read
 
+### The connect page
+
+Signing in is the one moment a Wallos user leaves their own instance, so the page they land on borrows Wallos's proportions, palette and typeface: the split brand panel, `#2563EB`, Barlow. The font is served by the Worker itself, because a page where somebody is typing an API key should not also be calling a font CDN.
+
+The left panel animates where the key actually is — the menu beside your name, Profile, the API Key field — as a drawing of that navigation rather than a screenshot of it, with captions that light up in step. `prefers-reduced-motion` stops the motion and leaves the menu open. Once you type your instance URL, a link to that instance's own `profile.php` appears beside the key field.
+
+It speaks the **28 languages Wallos itself ships**, under Wallos's own locale codes, chosen from `Accept-Language` and overridable from the picker. Arabic renders right-to-left, arrows included. The strings are this project's own — Wallos is GPL-3.0 and nothing of its is copied here (see [THIRD-PARTY.md](./THIRD-PARTY.md)) — and they are unreviewed by native speakers, so corrections are welcome as PRs.
+
 ### Names instead of ids
 
 The Wallos API takes integer ids. An assistant has names, so `create_subscription` and `update_subscription` accept both:
@@ -226,7 +235,7 @@ Redirects are refused rather than followed. A `307` or `308` preserves the metho
 
 ## How it was tested
 
-`bun test` runs 98 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, the account cap, and grant isolation between sessions.
+`bun test` runs 105 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, locale negotiation and translation completeness, the account cap, and grant isolation between sessions.
 
 `scripts/e2e.ts` runs the client against a real instance, which is where the wire contract is actually settled:
 

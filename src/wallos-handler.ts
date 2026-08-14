@@ -1,7 +1,13 @@
 import { env } from "cloudflare:workers";
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
+import barlow400 from "../assets/barlow-400-latin.woff2";
+import barlow400ext from "../assets/barlow-400-latin-ext.woff2";
+import barlow600 from "../assets/barlow-600-latin.woff2";
+import barlow600ext from "../assets/barlow-600-latin-ext.woff2";
 import setupGuide from "../docs/index.html";
+import { pickLocale } from "./i18n";
+import { signInPage } from "./sign-in";
 import {
 	accountId,
 	BodyTooLarge,
@@ -25,7 +31,6 @@ import {
 	isClientApproved,
 	OAuthError,
 	renderApprovalDialog,
-	sanitizeText,
 	validateCSRFToken,
 	validateOAuthState,
 	verifyApprovalState,
@@ -39,6 +44,27 @@ async function readBoundedForm(request: Request, limit: number): Promise<FormDat
 }
 
 const app = new Hono<{ Bindings: Env & { OAUTH_PROVIDER: OAuthHelpers } }>();
+
+const FONTS: Record<string, ArrayBuffer> = {
+	"barlow-400-latin.woff2": barlow400 as unknown as ArrayBuffer,
+	"barlow-400-latin-ext.woff2": barlow400ext as unknown as ArrayBuffer,
+	"barlow-600-latin.woff2": barlow600 as unknown as ArrayBuffer,
+	"barlow-600-latin-ext.woff2": barlow600ext as unknown as ArrayBuffer,
+};
+
+// The file name carries the version of the face it holds, so it can be cached
+// for as long as a browser is willing to.
+app.get("/_font/:name", (c) => {
+	const font = FONTS[c.req.param("name")];
+	if (!font) return c.notFound();
+	return new Response(font, {
+		headers: {
+			"Content-Type": "font/woff2",
+			"Cache-Control": "public, max-age=31536000, immutable",
+			"Access-Control-Allow-Origin": "*",
+		},
+	});
+});
 
 const guide = setupGuide as unknown as string;
 
@@ -189,6 +215,7 @@ app.get("/sign-in", async (c) => {
 	return signInPage({
 		csrfToken,
 		stateToken,
+		locale: pickLocale(c.req.header("accept-language") ?? null, url.searchParams.get("lang")),
 		setCookie,
 	});
 });
@@ -207,10 +234,13 @@ app.post("/sign-in", async (c) => {
 		const csrfClearCookie = validateCSRFToken(formData, c.req.raw);
 		const spent = await spendSignInState(formData, c.req.raw, c.env.OAUTH_KV);
 		if (spent instanceof Response) return spent;
-		return finishSignIn(c.env, formData, spent.oauthReqInfo, [
-			csrfClearCookie.clearCookie,
-			spent.clearSessionCookie,
-		]);
+		return finishSignIn(
+			c.env,
+			formData,
+			spent.oauthReqInfo,
+			[csrfClearCookie.clearCookie, spent.clearSessionCookie],
+			pickLocale(c.req.header("accept-language") ?? null, formString(formData, "lang")),
+		);
 	} catch (error: unknown) {
 		console.error("POST /sign-in error:", error);
 		if (error instanceof OAuthError) return error.toResponse();
@@ -249,8 +279,15 @@ async function finishSignIn(
 	formData: FormData,
 	oauthReqInfo: AuthRequest,
 	cookies: string[],
+	locale: string,
 ): Promise<Response> {
-	const checked = await checkSignInCredentials(envBindings, formData, oauthReqInfo, cookies);
+	const checked = await checkSignInCredentials(
+		envBindings,
+		formData,
+		oauthReqInfo,
+		cookies,
+		locale,
+	);
 	if (checked instanceof Response) return checked;
 	const { props, hostname, userId } = checked;
 	const marker = `account:${accountId(props.baseUrl, userId)}`;
@@ -275,6 +312,7 @@ async function checkSignInCredentials(
 	formData: FormData,
 	oauthReqInfo: AuthRequest,
 	cookies: string[],
+	locale: string,
 ): Promise<{ props: Props; hostname: string; userId: number } | Response> {
 	const rawUrl = formString(formData, "base_url");
 	const apiKey = formString(formData, "api_key");
@@ -284,6 +322,7 @@ async function checkSignInCredentials(
 			oauthReqInfo,
 			cookies,
 			"Both the Wallos URL and the API key are required.",
+			locale,
 		);
 	}
 	let baseUrl: string;
@@ -295,6 +334,7 @@ async function checkSignInCredentials(
 			oauthReqInfo,
 			cookies,
 			error instanceof Error ? error.message : "Invalid Wallos URL",
+			locale,
 		);
 	}
 	const hostname = hostnameOf(baseUrl);
@@ -304,6 +344,7 @@ async function checkSignInCredentials(
 			oauthReqInfo,
 			cookies,
 			"This Wallos host is not allowed on this server.",
+			locale,
 			403,
 		);
 	}
@@ -317,12 +358,13 @@ async function checkSignInCredentials(
 			oauthReqInfo,
 			cookies,
 			"This Wallos URL points at a private or loopback address. A Worker reaches public addresses only — expose the instance on a public hostname, through a tunnel if it lives on a home network.",
+			locale,
 			403,
 		);
 	}
 	const bound = await bindWallosUser(baseUrl, apiKey);
 	if (typeof bound === "string") {
-		return signInAgain(envBindings.OAUTH_KV, oauthReqInfo, cookies, bound);
+		return signInAgain(envBindings.OAUTH_KV, oauthReqInfo, cookies, bound, locale);
 	}
 	return { props: { baseUrl, apiKey, ...bound }, hostname, userId: bound.userId };
 }
@@ -377,6 +419,7 @@ async function signInAgain(
 	oauthReqInfo: AuthRequest,
 	cookies: string[],
 	error: string,
+	locale: string,
 	status = 400,
 ): Promise<Response> {
 	const { stateToken } = await createOAuthState(oauthReqInfo, kv);
@@ -385,6 +428,7 @@ async function signInAgain(
 	return signInPage({
 		csrfToken,
 		stateToken,
+		locale,
 		error,
 		status,
 		setCookie,
@@ -430,76 +474,6 @@ async function peekBoundState(
 			400,
 		);
 	}
-}
-
-function signInPage(opts: {
-	csrfToken: string;
-	stateToken: string;
-	error?: string;
-	baseUrl?: string;
-	status?: number;
-	setCookie?: string;
-	extraCookies?: string[];
-}): Response {
-	const error = opts.error ? `<p class="error">${sanitizeText(opts.error)}</p>` : "";
-	const baseUrl = sanitizeText(opts.baseUrl ?? "");
-	const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wallos MCP | Sign in</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-         line-height: 1.6; color: #333; background: #f9fafb; margin: 0; }
-  .card { max-width: 520px; margin: 3rem auto; background: #fff; border-radius: 8px;
-          box-shadow: 0 8px 36px 8px rgba(0, 0, 0, 0.1); padding: 2rem; }
-  h1 { font-size: 1.3rem; font-weight: 500; margin-top: 0; }
-  label { display: block; font-weight: 500; margin: 1rem 0 .35rem; }
-  input[type=url], input[type=password] {
-    width: 100%; box-sizing: border-box; padding: .65rem .75rem; border: 1px solid #e5e7eb;
-    border-radius: 6px; font: inherit;
-  }
-  .hint { color: #555; font-size: .92rem; margin: 0 0 1rem; }
-  .custody { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
-             padding: .8rem 1rem; font-size: .88rem; color: #4b3f14; margin: 0 0 1.25rem; }
-  .custody a { color: #8a6d0b; }
-  .error { background: #fff1f0; border: 1px solid #f5c2c0; color: #8a1f11;
-           border-radius: 6px; padding: .75rem 1rem; }
-  .button { margin-top: 1.5rem; padding: .75rem 1.5rem; border: none; border-radius: 6px;
-            background: #0070f3; color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
-</style>
-</head>
-<body>
-<div class="card">
-  <h1>Connect a Wallos account</h1>
-  <p class="hint">The base URL of your Wallos instance, and the API key from Settings → your profile.</p>
-  <p class="custody">This key is stored, encrypted, by whoever runs this deployment, and it carries
-  the same authority over your subscriptions as your password. Regenerating the key in Wallos ends
-  that access immediately. To keep it on your own infrastructure instead, deploy this server
-  yourself — <a href="https://github.com/mkpoli/wallos-mcp">github.com/mkpoli/wallos-mcp</a>.</p>
-  ${error}
-  <form method="post" action="/sign-in">
-    <input type="hidden" name="csrf_token" value="${sanitizeText(opts.csrfToken)}">
-    <input type="hidden" name="oauth_state" value="${sanitizeText(opts.stateToken)}">
-    <label for="base_url">Wallos URL</label>
-    <input id="base_url" name="base_url" type="url" required placeholder="https://wallos.example.com" value="${baseUrl}">
-    <label for="api_key">API key</label>
-    <input id="api_key" name="api_key" type="password" required autocomplete="off">
-    <button type="submit" class="button">Sign in</button>
-  </form>
-</div>
-</body>
-</html>`;
-	const headers = new Headers({
-		"Content-Type": "text/html; charset=utf-8",
-		"Cache-Control": "no-store",
-		"Content-Security-Policy": "frame-ancestors 'none'",
-		"X-Frame-Options": "DENY",
-	});
-	if (opts.setCookie) headers.append("Set-Cookie", opts.setCookie);
-	for (const cookie of opts.extraCookies ?? []) headers.append("Set-Cookie", cookie);
-	return new Response(html, { status: opts.status ?? 200, headers });
 }
 
 export { app as WallosHandler };
