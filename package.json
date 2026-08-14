@@ -27,8 +27,8 @@
 	"scripts": {
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
-		"check": "biome check src test && tsc --noEmit",
-		"fix": "biome check --write src test",
+		"check": "biome check src test scripts && tsc --noEmit",
+		"fix": "biome check --write src test scripts",
 		"test": "bun test",
 		"types": "wrangler types"
 	},

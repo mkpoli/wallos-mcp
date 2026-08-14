@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 132" width="520" height="132" role="img" aria-label="wallos-mcp">
+  <defs>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10B981"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="cool" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6E56CF"/>
+      <stop offset="1" stop-color="#3E63DD"/>
+    </linearGradient>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#10B981" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#10B981" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#6E56CF" stop-opacity="0"/>
+      <animateTransform attributeName="gradientTransform" type="translate"
+                        values="-1 0; 1 0; -1 0" dur="6s" repeatCount="indefinite"/>
+    </linearGradient>
+  </defs>
+
+  <!-- a card inside the billing period that keeps coming round -->
+  <g transform="translate(20 22)">
+    <path d="M21.6 10.9 A38 38 0 1 0 73.8 14.1" fill="none" stroke="url(#mint)" stroke-width="3.5"
+          stroke-linecap="round" opacity="0.85"/>
+    <path d="M67 6.8 L78.5 11 L70.5 18.6 Z" fill="url(#mint)"/>
+    <rect x="22" y="22" width="48" height="36" rx="7" fill="none" stroke="url(#mint)" stroke-width="4"/>
+    <rect x="26" y="30" width="40" height="6" rx="1" fill="url(#mint)" opacity="0.4"/>
+    <!-- a payment travelling that period -->
+    <circle r="4.5" fill="url(#cool)" opacity="0">
+      <animateMotion dur="4s" repeatCount="indefinite" calcMode="linear"
+                     path="M21.6 10.9 A38 38 0 1 0 73.8 14.1"/>
+      <animate attributeName="opacity" values="0;1;1;0" dur="4s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- wordmark -->
+  <text x="140" y="72" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+        font-size="46" font-weight="700" letter-spacing="-1" fill="#16181d">wallos<tspan fill="url(#mint)">-</tspan>mcp</text>
+  <text x="142" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+        font-size="14" fill="#16181d" opacity="0.62">remote MCP server · Cloudflare Workers</text>
+
+  <!-- animated underline -->
+  <rect x="142" y="110" width="330" height="3" rx="1.5" fill="#16181d" opacity="0.12"/>
+  <rect x="142" y="110" width="330" height="3" rx="1.5" fill="url(#sweep)"/>
+</svg>

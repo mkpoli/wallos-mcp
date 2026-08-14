@@ -1064,3 +1064,23 @@ Example response:
 
 **Reads:** $_REQUEST['apiKey'] $_REQUEST['api_key']
 
+
+## Behaviour confirmed against a running v5.2.0 instance
+
+- The HTTP status is `200` for every outcome, authentication failures included.
+  `success` in the body is the only signal.
+- A JSON request body is not read at all: PHP fills `$_POST` only for
+  `application/x-www-form-urlencoded` and `multipart/form-data`, so a JSON body
+  answers `{"success":false,"title":"Missing API key"}` even when the key is in
+  it.
+- A read answers with `success`, `title`, its own payload key, and `notes` — an
+  array carrying warnings such as a stale exchange rate. The `users` array shown
+  in the `get_subscriptions.php` docblock is not part of the v5.2.0 response.
+- `get_currencies.php` carries `main_currency` beside the list, which is the
+  currency a subscription falls back to.
+- Category, currency, payment-method and household entries each carry `in_use`,
+  which tells a caller whether deleting one would orphan a subscription.
+- `get_monthly_cost.php` returns money as display strings: `monthly_cost` is
+  grouped by thousands separator ("88,242.55") and `localized_monthly_cost` is
+  fully formatted ("¥88,243"). Neither parses as a number without stripping the
+  separators.

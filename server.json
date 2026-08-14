@@ -1,0 +1,11 @@
+{
+	"$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+	"name": "io.github.mkpoli/wallos-mcp",
+	"description": "Your self-hosted Wallos subscription tracker over MCP: list, create, edit and delete subscriptions, categories, payment methods, household members and currencies",
+	"version": "0.1.0",
+	"websiteUrl": "https://github.com/mkpoli/wallos-mcp#readme",
+	"repository": {
+		"url": "https://github.com/mkpoli/wallos-mcp",
+		"source": "github"
+	}
+}
