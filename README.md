@@ -260,3 +260,5 @@ bun run dev     # wrangler dev
 ## License
 
 MIT
+
+[![M8ven Verified](https://m8ven.ai/badge/mcp/mkpoli-wallos-mcp-96leu7?variant=verified)](https://m8ven.ai/mcp/mkpoli-wallos-mcp-96leu7)
