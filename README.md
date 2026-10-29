@@ -252,7 +252,7 @@ The deployment itself was verified by driving a client handshake end to end agai
 
 ```sh
 bun install
-bun run check   # biome + tsc
+bun run check   # biome + tsrs
 bun test
 bun run dev     # wrangler dev
 ```
