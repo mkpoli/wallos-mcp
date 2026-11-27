@@ -144,6 +144,7 @@ button.submit {
   background: var(--brand); color: #fff; font: inherit; font-size: 1rem; font-weight: 500; cursor: pointer;
 }
 button.submit:hover { background: var(--brand-hover); }
+button.submit:disabled { opacity: .6; cursor: progress; }
 .custody {
   background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-ink);
   border-radius: 8px; padding: .75rem .9rem; font-size: .85rem; margin: 0 0 20px;
@@ -221,7 +222,7 @@ export function signInPage(opts: {
       <p class="lede">${sanitizeText(t.lede)}</p>
       <p class="custody">${sanitizeText(t.custody)}</p>
       ${error}
-      <form method="post" action="/sign-in">
+      <form id="sign_in" method="post" action="/sign-in">
         <input type="hidden" name="csrf_token" value="${sanitizeText(opts.csrfToken)}">
         <input type="hidden" name="oauth_state" value="${sanitizeText(opts.stateToken)}">
         <input type="hidden" name="lang" value="${sanitizeText(opts.locale)}">
@@ -261,6 +262,15 @@ export function signInPage(opts: {
   }
   url.addEventListener("input", sync);
   sync();
+})();
+// The form's cookies are spent by the first submit, so a second press while the
+// redirect is still loading would only fetch an error page over a sign-in that
+// worked.
+(function () {
+  var form = document.getElementById("sign_in");
+  var button = form.querySelector("button[type=submit]");
+  form.addEventListener("submit", function () { button.disabled = true; });
+  window.addEventListener("pageshow", function () { button.disabled = false; });
 })();
 </script>
 </body>
