@@ -196,9 +196,9 @@ export function sanitizeUrl(url: string): string {
 
 /**
  * How long one sign-in attempt stays valid: the stored state, the cookie that
- * binds it to the browser and the form's CSRF cookie all share it. The form
- * asks for a key that has to be fetched from another site, so it allows for
- * that errand.
+ * binds it to the browser and the CSRF cookie of the approval dialog and of
+ * the sign-in form all share it. The form asks for a key that has to be
+ * fetched from another site, so it allows for that errand.
  */
 export const SIGN_IN_TTL_SECONDS = 1800;
 
