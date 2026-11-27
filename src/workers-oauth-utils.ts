@@ -195,6 +195,14 @@ export function sanitizeUrl(url: string): string {
 }
 
 /**
+ * How long one sign-in attempt stays valid: the stored state, the cookie that
+ * binds it to the browser and the form's CSRF cookie all share it. The form
+ * asks for a key that has to be fetched from another site, so it allows for
+ * that errand.
+ */
+export const SIGN_IN_TTL_SECONDS = 1800;
+
+/**
  * Generates a new CSRF token and corresponding cookie for form protection
  * @returns Object containing the token and Set-Cookie header value
  */
@@ -202,7 +210,7 @@ export function generateCSRFProtection(): CSRFProtectionResult {
 	const csrfCookieName = "__Host-CSRF_TOKEN";
 
 	const token = crypto.randomUUID();
-	const setCookie = `${csrfCookieName}=${token}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=600`;
+	const setCookie = `${csrfCookieName}=${token}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${SIGN_IN_TTL_SECONDS}`;
 	return { token, setCookie };
 }
 
@@ -248,13 +256,13 @@ export function validateCSRFToken(formData: FormData, request: Request): Validat
  * Creates and stores OAuth state information, returning a state token
  * @param oauthReqInfo - OAuth request information to store with the state
  * @param kv - Cloudflare KV namespace for storing OAuth state data
- * @param stateTTL - Time-to-live for OAuth state in seconds (defaults to 600)
+ * @param stateTTL - Time-to-live for OAuth state in seconds (defaults to SIGN_IN_TTL_SECONDS)
  * @returns Object containing the state token (KV-only validation, no cookie needed)
  */
 export async function createOAuthState(
 	oauthReqInfo: AuthRequest,
 	kv: KVNamespace,
-	stateTTL = 600,
+	stateTTL = SIGN_IN_TTL_SECONDS,
 ): Promise<OAuthStateResult> {
 	const stateToken = crypto.randomUUID();
 
@@ -291,7 +299,7 @@ export async function bindStateToSession(stateToken: string): Promise<BindStateR
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
 	const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-	const setCookie = `${consentedStateCookieName}=${hashHex}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=600`;
+	const setCookie = `${consentedStateCookieName}=${hashHex}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${SIGN_IN_TTL_SECONDS}`;
 
 	return { setCookie };
 }
