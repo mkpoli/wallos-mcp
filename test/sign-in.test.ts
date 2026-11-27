@@ -200,6 +200,51 @@ describe("who the sign-in admits", () => {
 		expect(completed).toEqual([]);
 	});
 
+	test("lets the form be resubmitted after a failed API key", async () => {
+		const kv = memoryKv();
+		const completed: PropsCapture[] = [];
+		const env = envFor(kv, "*", completed);
+		serveWallos("fail");
+		const refused = await postSignIn(kv, env, {
+			base_url: "https://wallos.example.com",
+			api_key: "wrong",
+		});
+		expect(refused.status).toBe(400);
+
+		// What a browser holds afterwards: headers applied in order, Max-Age=0 deleting.
+		const jar = new Map<string, string>();
+		for (const header of refused.headers.getSetCookie()) {
+			const pair = header.split(";")[0] ?? "";
+			const name = pair.slice(0, pair.indexOf("="));
+			if (/Max-Age=0\b/.test(header)) jar.delete(name);
+			else jar.set(name, pair);
+		}
+		const html = await refused.text();
+		const field = (name: string) =>
+			new RegExp(`name="${name}" value="([^"]*)"`).exec(html)?.[1] ?? "";
+
+		serveWallos({ id: 7, username: "jane", email: "jane@example.com" });
+		const retried = await WallosHandler.fetch(
+			new Request("https://server.example/sign-in", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+					Cookie: [...jar.values()].join("; "),
+				},
+				body: new URLSearchParams({
+					csrf_token: field("csrf_token"),
+					oauth_state: field("oauth_state"),
+					base_url: "https://wallos.example.com",
+					api_key: "k",
+				}).toString(),
+			}),
+			env as never,
+			{} as never,
+		);
+		expect(retried.status).toBe(302);
+		expect(completed.map((props) => props.userId)).toEqual([7]);
+	});
+
 	test("refuses a new account once the cap is reached", async () => {
 		const kv = memoryKv();
 		await kv.put("account:https%3A%2F%2Fother.example.com@1", "already");
