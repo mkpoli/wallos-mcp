@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { addApprovedClient, isClientApproved } from "../src/workers-oauth-utils";
+import {
+	addApprovedClient,
+	bindStateToSession,
+	createOAuthState,
+	generateCSRFProtection,
+	isClientApproved,
+	SIGN_IN_TTL_SECONDS,
+} from "../src/workers-oauth-utils";
 
 const SECRET = "test-cookie-secret";
 
@@ -60,5 +67,24 @@ describe("approved-client cookie", () => {
 		expect(
 			await isClientApproved(new Request("https://example.test/authorize"), "client-a", SECRET),
 		).toBe(false);
+	});
+});
+
+describe("sign-in lifetime", () => {
+	it("gives the stored state and both form cookies the same half hour", async () => {
+		const stored: number[] = [];
+		const kv = {
+			put: async (_key: string, _value: string, options?: { expirationTtl?: number }) => {
+				stored.push(options?.expirationTtl ?? 0);
+			},
+		};
+		const { stateToken } = await createOAuthState({ clientId: "client-a" } as never, kv as never);
+		const session = (await bindStateToSession(stateToken)).setCookie;
+		const csrf = generateCSRFProtection().setCookie;
+
+		expect(SIGN_IN_TTL_SECONDS).toBe(1800);
+		expect(stored).toEqual([SIGN_IN_TTL_SECONDS]);
+		expect(session).toContain(`Max-Age=${SIGN_IN_TTL_SECONDS}`);
+		expect(csrf).toContain(`Max-Age=${SIGN_IN_TTL_SECONDS}`);
 	});
 });
