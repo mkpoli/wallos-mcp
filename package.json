@@ -1,6 +1,6 @@
 {
 	"name": "wallos-mcp",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"type": "module",
 	"description": "Your Wallos subscription tracker on a Cloudflare Worker you deploy yourself: list, create, edit and delete subscriptions, categories, payment methods, household members and currencies, over MCP",
