@@ -418,8 +418,10 @@ async function signInAgain(
 		locale,
 		error,
 		status,
-		setCookie,
-		extraCookies: [...cookies, csrfCookie],
+		// A browser applies Set-Cookie headers in order, and `cookies` holds the
+		// deletions for the spent form's CSRF and session cookies under the same
+		// names. The fresh pair goes last so the retry keeps them.
+		extraCookies: [...cookies, setCookie, csrfCookie],
 	});
 }
 
