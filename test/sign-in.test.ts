@@ -314,3 +314,17 @@ describe("the cookies the approval sets", () => {
 		expect(cookies.some((c) => c.startsWith("__Host-APPROVED_CLIENTS="))).toBe(true);
 	});
 });
+
+describe("the sign-in form", () => {
+	test("disables its button once submitted and restores it when the page is shown again", async () => {
+		const { signInPage } = await import("../src/sign-in");
+		const html = await signInPage({ csrfToken: "c", stateToken: "s", locale: "en" }).text();
+		expect(html).toContain('<form id="sign_in" method="post" action="/sign-in">');
+		expect(html).toContain(
+			'form.addEventListener("submit", function () { button.disabled = true; })',
+		);
+		expect(html).toContain(
+			'window.addEventListener("pageshow", function () { button.disabled = false; })',
+		);
+	});
+});
