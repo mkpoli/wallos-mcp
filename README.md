@@ -235,7 +235,7 @@ Redirects are refused rather than followed. A `307` or `308` preserves the metho
 
 ## How it was tested
 
-`bun test` runs 105 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, locale negotiation and translation completeness, the account cap, and grant isolation between sessions.
+`bun test` runs 108 tests with `fetch` stubbed: form encoding, the always-200 error convention, billing-period parsing, next-payment derivation across month ends and leap years, name resolution and creation, the host allowlist, the private-address refusal, the minimum-version floor, locale negotiation and translation completeness, the account cap, and grant isolation between sessions.
 
 `scripts/e2e.ts` runs the client against a real instance, which is where the wire contract is actually settled:
 
