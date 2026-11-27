@@ -75,7 +75,7 @@ export class WallosMCP extends McpAgent<Env, Record<string, never>, Props> {
 	// @ts-expect-error distinct McpServer package identities
 	server = new McpServer({
 		name: "Wallos MCP",
-		version: "0.1.0",
+		version: "0.1.1",
 	});
 
 	private callerAccount: string | null = null;
